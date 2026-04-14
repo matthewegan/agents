@@ -1,0 +1,20 @@
+[project]
+name = "hscli"
+version = "0.1.0"
+description = "Agent-friendly CLI for HubSpot CMS"
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.12",
+    "httpx>=0.27",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+hscli = "hscli.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["hscli"]
