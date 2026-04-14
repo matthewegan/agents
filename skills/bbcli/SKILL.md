@@ -237,7 +237,4 @@ To add a new convenience command, prefer `bb raw` first — if the pattern repea
 
 ## Reference docs
 
-Clipped Bitbucket API docs live in the user's Obsidian vault at:
-`~/Library/Mobile Documents/com~apple~CloudDocs/Documents/cortex/references/api-docs/bitbucket-cloud-rest-api.md`
-
-Consult it when building new wrappers or when you need to understand a specific endpoint's request/response shape.
+The official Bitbucket Cloud REST API docs are at <https://developer.atlassian.com/cloud/bitbucket/rest/>. Consult them when building new wrappers or when you need to understand a specific endpoint's request/response shape.
