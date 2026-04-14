@@ -42,9 +42,9 @@ def _refresh_access_token(personal_access_key: str) -> str:
     except ValueError as e:
         raise AuthError(f"invalid response from token refresh: {resp.text[:200]}") from e
 
-    token = data.get("access_token")
+    token = data.get("oauthAccessToken") or data.get("access_token")
     if not token:
-        raise AuthError(f"no access_token in refresh response: {data}")
+        raise AuthError(f"no access token in refresh response: {data}")
     return token
 
 

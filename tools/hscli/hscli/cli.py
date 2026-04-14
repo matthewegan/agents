@@ -71,6 +71,16 @@ def _load_data(data_arg: Optional[str]) -> Optional[dict]:
         raise ValidationError(f"--data is not valid JSON: {e}")
 
 
+def _matches_state(page_state: str, filter_state: str) -> bool:
+    """Check if a page's state matches the filter using prefix matching.
+
+    HubSpot uses compound states like PUBLISHED_OR_SCHEDULED, PUBLISHED_AB,
+    PUBLISHED_AB_VARIANT, DRAFT_AB, etc. A filter of "PUBLISHED" matches any
+    state starting with "PUBLISHED", and "DRAFT" matches any starting with "DRAFT".
+    """
+    return page_state.upper().startswith(filter_state.upper())
+
+
 def _find_modules_in_layout(layout_sections: dict, target: str) -> list[str]:
     """Walk layoutSections recursively to find module paths matching target."""
     matches = []
@@ -88,6 +98,61 @@ def _find_modules_in_layout(layout_sections: dict, target: str) -> list[str]:
 
     _walk(layout_sections)
     return matches
+
+
+def _list_pages(
+    api_path: str,
+    state: Optional[str],
+    name: Optional[str],
+    limit: Optional[int],
+    query: list[str],
+) -> None:
+    params = _parse_query(query) or {}
+    if name:
+        params["name__icontains"] = name
+
+    items = []
+    with _client() as c:
+        for page in c.paginate(api_path, params=params, limit=None):
+            if state and not _matches_state(page.get("state", ""), state):
+                continue
+            items.append(page)
+            if limit is not None and len(items) >= limit:
+                break
+    emit_json(items)
+
+
+def _find_by_module(
+    api_path: str,
+    module: str,
+    state: Optional[str],
+    scan_limit: Optional[int],
+    limit: Optional[int],
+) -> None:
+    matches = []
+    scanned = 0
+    with _client() as c:
+        for page in c.paginate(api_path, limit=None):
+            if state and not _matches_state(page.get("state", ""), state):
+                continue
+            scanned += 1
+            if scan_limit is not None and scanned > scan_limit:
+                break
+            layout = page.get("layoutSections", {})
+            found_modules = _find_modules_in_layout(layout, module)
+            if found_modules:
+                matches.append({
+                    "id": page.get("id"),
+                    "name": page.get("name"),
+                    "slug": page.get("slug"),
+                    "state": page.get("state"),
+                    "url": page.get("url"),
+                    "updatedAt": page.get("updatedAt"),
+                    "matched_modules": found_modules,
+                })
+                if limit is not None and len(matches) >= limit:
+                    break
+    emit_json(matches)
 
 
 # ---------- auth ----------
@@ -149,7 +214,7 @@ def paginate(
 @landing_pages_app.command("list")
 def landing_pages_list(
     state: Optional[str] = typer.Option(
-        None, "--state", help="Filter by state, e.g. PUBLISHED, DRAFT"
+        None, "--state", help="Filter by state prefix, e.g. PUBLISHED, DRAFT"
     ),
     name: Optional[str] = typer.Option(
         None, "--name", help="Filter by name (contains, case-insensitive)"
@@ -160,17 +225,7 @@ def landing_pages_list(
     ),
 ) -> None:
     """List landing pages with optional filters."""
-    params = _parse_query(query) or {}
-    if state:
-        params["state"] = state.upper()
-    if name:
-        params["name__icontains"] = name
-
-    with _client() as c:
-        items = list(
-            c.paginate("/cms/v3/pages/landing-pages", params=params, limit=limit)
-        )
-    emit_json(items)
+    _list_pages("/cms/v3/pages/landing-pages", state, name, limit, query)
 
 
 @landing_pages_app.command("get")
@@ -188,10 +243,10 @@ def landing_pages_find_by_module(
         ..., help="Module path or substring to search for in layoutSections"
     ),
     state: Optional[str] = typer.Option(
-        None, "--state", help="Filter by state, e.g. PUBLISHED, DRAFT"
+        None, "--state", help="Filter by state prefix, e.g. PUBLISHED, DRAFT"
     ),
     scan_limit: Optional[int] = typer.Option(
-        None, "--scan-limit", help="Max pages to scan from the API"
+        None, "--scan-limit", help="Max pages to scan (after state filtering)"
     ),
     limit: Optional[int] = typer.Option(
         None, "--limit", help="Max matching results to return"
@@ -202,31 +257,7 @@ def landing_pages_find_by_module(
     Fetches landing pages and inspects their layoutSections for modules
     whose path contains the given string (case-insensitive).
     """
-    params: dict[str, str] = {}
-    if state:
-        params["state"] = state.upper()
-
-    matches = []
-    with _client() as c:
-        for page in c.paginate(
-            "/cms/v3/pages/landing-pages", params=params, limit=scan_limit
-        ):
-            layout = page.get("layoutSections", {})
-            found_modules = _find_modules_in_layout(layout, module)
-            if found_modules:
-                matches.append({
-                    "id": page.get("id"),
-                    "name": page.get("name"),
-                    "slug": page.get("slug"),
-                    "state": page.get("state"),
-                    "url": page.get("url"),
-                    "updatedAt": page.get("updatedAt"),
-                    "matched_modules": found_modules,
-                })
-                if limit is not None and len(matches) >= limit:
-                    break
-
-    emit_json(matches)
+    _find_by_module("/cms/v3/pages/landing-pages", module, state, scan_limit, limit)
 
 
 # ---------- cms / site-pages ----------
@@ -234,7 +265,7 @@ def landing_pages_find_by_module(
 @site_pages_app.command("list")
 def site_pages_list(
     state: Optional[str] = typer.Option(
-        None, "--state", help="Filter by state, e.g. PUBLISHED, DRAFT"
+        None, "--state", help="Filter by state prefix, e.g. PUBLISHED, DRAFT"
     ),
     name: Optional[str] = typer.Option(
         None, "--name", help="Filter by name (contains, case-insensitive)"
@@ -245,17 +276,7 @@ def site_pages_list(
     ),
 ) -> None:
     """List site pages with optional filters."""
-    params = _parse_query(query) or {}
-    if state:
-        params["state"] = state.upper()
-    if name:
-        params["name__icontains"] = name
-
-    with _client() as c:
-        items = list(
-            c.paginate("/cms/v3/pages/site-pages", params=params, limit=limit)
-        )
-    emit_json(items)
+    _list_pages("/cms/v3/pages/site-pages", state, name, limit, query)
 
 
 @site_pages_app.command("get")
@@ -273,10 +294,10 @@ def site_pages_find_by_module(
         ..., help="Module path or substring to search for in layoutSections"
     ),
     state: Optional[str] = typer.Option(
-        None, "--state", help="Filter by state, e.g. PUBLISHED, DRAFT"
+        None, "--state", help="Filter by state prefix, e.g. PUBLISHED, DRAFT"
     ),
     scan_limit: Optional[int] = typer.Option(
-        None, "--scan-limit", help="Max pages to scan from the API"
+        None, "--scan-limit", help="Max pages to scan (after state filtering)"
     ),
     limit: Optional[int] = typer.Option(
         None, "--limit", help="Max matching results to return"
@@ -287,31 +308,7 @@ def site_pages_find_by_module(
     Fetches site pages and inspects their layoutSections for modules
     whose path contains the given string (case-insensitive).
     """
-    params: dict[str, str] = {}
-    if state:
-        params["state"] = state.upper()
-
-    matches = []
-    with _client() as c:
-        for page in c.paginate(
-            "/cms/v3/pages/site-pages", params=params, limit=scan_limit
-        ):
-            layout = page.get("layoutSections", {})
-            found_modules = _find_modules_in_layout(layout, module)
-            if found_modules:
-                matches.append({
-                    "id": page.get("id"),
-                    "name": page.get("name"),
-                    "slug": page.get("slug"),
-                    "state": page.get("state"),
-                    "url": page.get("url"),
-                    "updatedAt": page.get("updatedAt"),
-                    "matched_modules": found_modules,
-                })
-                if limit is not None and len(matches) >= limit:
-                    break
-
-    emit_json(matches)
+    _find_by_module("/cms/v3/pages/site-pages", module, state, scan_limit, limit)
 
 
 # ---------- entry point ----------

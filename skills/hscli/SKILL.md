@@ -119,9 +119,9 @@ hscli cms site-pages find-by-module MODULE [--state PUBLISHED|DRAFT] [--scan-lim
 Available on both `landing-pages` and `site-pages`. Fetches pages from the API and inspects their `layoutSections` recursively for module paths matching the given string (case-insensitive substring match).
 
 - `MODULE` — the module path or substring to search for (e.g., `"rich_text"`, `"calendly-popup-button"`, `"custom-cta"`)
-- `--scan-limit N` — limits how many pages are fetched from the API (controls API calls)
+- `--scan-limit N` — limits how many pages scanned after state filtering (controls API calls)
 - `--limit N` — limits how many matching results are returned (controls output size)
-- `--state` — filter to only PUBLISHED or DRAFT pages before scanning
+- `--state` — prefix match on page state. `PUBLISHED` matches `PUBLISHED_OR_SCHEDULED`, `PUBLISHED_AB`, etc. `DRAFT` matches `DRAFT`, `DRAFT_AB`, etc.
 
 Output is a JSON array of matches, each containing `id`, `name`, `slug`, `state`, `url`, `updatedAt`, and `matched_modules` (the specific module paths that matched).
 
