@@ -32,10 +32,12 @@ app = typer.Typer(
 auth_app = typer.Typer(help="Auth and credential checks.", no_args_is_help=True)
 cms_app = typer.Typer(help="CMS commands.", no_args_is_help=True)
 landing_pages_app = typer.Typer(help="Landing page commands.", no_args_is_help=True)
+site_pages_app = typer.Typer(help="Site page commands.", no_args_is_help=True)
 
 app.add_typer(auth_app, name="auth")
 app.add_typer(cms_app, name="cms")
 cms_app.add_typer(landing_pages_app, name="landing-pages")
+cms_app.add_typer(site_pages_app, name="site-pages")
 
 
 # ---------- helpers ----------
@@ -208,6 +210,91 @@ def landing_pages_find_by_module(
     with _client() as c:
         for page in c.paginate(
             "/cms/v3/pages/landing-pages", params=params, limit=scan_limit
+        ):
+            layout = page.get("layoutSections", {})
+            found_modules = _find_modules_in_layout(layout, module)
+            if found_modules:
+                matches.append({
+                    "id": page.get("id"),
+                    "name": page.get("name"),
+                    "slug": page.get("slug"),
+                    "state": page.get("state"),
+                    "url": page.get("url"),
+                    "updatedAt": page.get("updatedAt"),
+                    "matched_modules": found_modules,
+                })
+                if limit is not None and len(matches) >= limit:
+                    break
+
+    emit_json(matches)
+
+
+# ---------- cms / site-pages ----------
+
+@site_pages_app.command("list")
+def site_pages_list(
+    state: Optional[str] = typer.Option(
+        None, "--state", help="Filter by state, e.g. PUBLISHED, DRAFT"
+    ),
+    name: Optional[str] = typer.Option(
+        None, "--name", help="Filter by name (contains, case-insensitive)"
+    ),
+    limit: Optional[int] = typer.Option(None, "--limit"),
+    query: list[str] = typer.Option(
+        [], "--query", "-q", help="Additional KEY=VALUE query params (repeatable)"
+    ),
+) -> None:
+    """List site pages with optional filters."""
+    params = _parse_query(query) or {}
+    if state:
+        params["state"] = state.upper()
+    if name:
+        params["name__icontains"] = name
+
+    with _client() as c:
+        items = list(
+            c.paginate("/cms/v3/pages/site-pages", params=params, limit=limit)
+        )
+    emit_json(items)
+
+
+@site_pages_app.command("get")
+def site_pages_get(
+    page_id: str = typer.Argument(..., help="Site page ID"),
+) -> None:
+    """Get full details of a single site page."""
+    with _client() as c:
+        emit_json(c.get_json(f"/cms/v3/pages/site-pages/{page_id}"))
+
+
+@site_pages_app.command("find-by-module")
+def site_pages_find_by_module(
+    module: str = typer.Argument(
+        ..., help="Module path or substring to search for in layoutSections"
+    ),
+    state: Optional[str] = typer.Option(
+        None, "--state", help="Filter by state, e.g. PUBLISHED, DRAFT"
+    ),
+    scan_limit: Optional[int] = typer.Option(
+        None, "--scan-limit", help="Max pages to scan from the API"
+    ),
+    limit: Optional[int] = typer.Option(
+        None, "--limit", help="Max matching results to return"
+    ),
+) -> None:
+    """Find site pages that use a specific module.
+
+    Fetches site pages and inspects their layoutSections for modules
+    whose path contains the given string (case-insensitive).
+    """
+    params: dict[str, str] = {}
+    if state:
+        params["state"] = state.upper()
+
+    matches = []
+    with _client() as c:
+        for page in c.paginate(
+            "/cms/v3/pages/site-pages", params=params, limit=scan_limit
         ):
             layout = page.get("layoutSections", {})
             found_modules = _find_modules_in_layout(layout, module)

@@ -1,6 +1,6 @@
 ---
 name: hscli
-description: HubSpot API CLI (`hscli`) reference for CMS landing pages, module discovery, and general HubSpot API access. Use when the user mentions HubSpot CMS, landing pages, HubSpot modules, finding which pages use a module, HubSpot API queries, or refers to the `hscli` command by name. Also use when working in a directory with HubSpot CMS modules (e.g., `.module/` folders, `meta.json`/`fields.json` files, or HubL templates) and the user needs to query the live HubSpot account. Do NOT activate for HubSpot CLI project commands (`hs project`, `hs cms upload`) — those use the official `hs` CLI, not `hscli`.
+description: HubSpot API CLI (`hscli`) reference for CMS pages (landing pages and site pages), module discovery, and general HubSpot API access. Use when the user mentions HubSpot CMS, landing pages, site pages, HubSpot modules, finding which pages use a module, HubSpot API queries, or refers to the `hscli` command by name. Also use when working in a directory with HubSpot CMS modules (e.g., `.module/` folders, `meta.json`/`fields.json` files, or HubL templates) and the user needs to query the live HubSpot account. Do NOT activate for HubSpot CLI project commands (`hs project`, `hs cms upload`) — those use the official `hs` CLI, not `hscli`.
 ---
 
 # hscli — HubSpot API CLI
@@ -11,9 +11,9 @@ description: HubSpot API CLI (`hscli`) reference for CMS landing pages, module d
 
 Use `hscli` for querying the HubSpot API when **any** of these is true:
 
-- The user mentions HubSpot CMS, landing pages, or HubSpot modules.
-- The user wants to find which landing pages use a particular module.
-- The user wants to list, filter, or inspect landing pages on HubSpot.
+- The user mentions HubSpot CMS, landing pages, site pages, or HubSpot modules.
+- The user wants to find which pages (landing or site) use a particular module.
+- The user wants to list, filter, or inspect pages on HubSpot.
 - The user needs to make authenticated requests to any HubSpot API endpoint.
 - The user refers to `hscli` by name.
 - You're working in a HubSpot CMS modules directory and need to check live page data.
@@ -106,9 +106,17 @@ hscli cms landing-pages get PAGE_ID
 hscli cms landing-pages find-by-module MODULE [--state PUBLISHED|DRAFT] [--scan-limit N] [--limit N]
 ```
 
+### CMS — Site Pages
+
+```sh
+hscli cms site-pages list [--state PUBLISHED|DRAFT] [--name SUBSTRING] [--limit N] [--query k=v]...
+hscli cms site-pages get PAGE_ID
+hscli cms site-pages find-by-module MODULE [--state PUBLISHED|DRAFT] [--scan-limit N] [--limit N]
+```
+
 #### Key command: `find-by-module`
 
-This is the primary use case — finding which landing pages use a specific module. It fetches pages from the API and inspects their `layoutSections` recursively for module paths matching the given string (case-insensitive substring match).
+Available on both `landing-pages` and `site-pages`. Fetches pages from the API and inspects their `layoutSections` recursively for module paths matching the given string (case-insensitive substring match).
 
 - `MODULE` — the module path or substring to search for (e.g., `"rich_text"`, `"calendly-popup-button"`, `"custom-cta"`)
 - `--scan-limit N` — limits how many pages are fetched from the API (controls API calls)
@@ -116,6 +124,8 @@ This is the primary use case — finding which landing pages use a specific modu
 - `--state` — filter to only PUBLISHED or DRAFT pages before scanning
 
 Output is a JSON array of matches, each containing `id`, `name`, `slug`, `state`, `url`, `updatedAt`, and `matched_modules` (the specific module paths that matched).
+
+To search across both page types, run both commands.
 
 ## Common recipes
 
@@ -144,11 +154,16 @@ hscli cms landing-pages find-by-module "rich_text" --limit 10 \
   | jq '[.[] | {name, url, modules: .matched_modules}]'
 ```
 
+### Find a module across all page types
+
+```sh
+hscli cms landing-pages find-by-module "calendly-popup-button" --state PUBLISHED
+hscli cms site-pages find-by-module "calendly-popup-button" --state PUBLISHED
+```
+
 ### Hit an unwrapped endpoint
 
 ```sh
-# Site pages (not landing pages)
-hscli raw GET /cms/v3/pages/site-pages
 
 # With query params
 hscli raw GET /cms/v3/pages/landing-pages -q state=PUBLISHED -q limit=5
@@ -193,7 +208,7 @@ propertyName__operator=value
 
 Operators: `eq`, `ne`, `contains`, `icontains`, `lt`, `lte`, `gt`, `gte`, `in`, `not_in`, `startswith`, `not_null`
 
-Useful filterable properties for landing pages: `id`, `slug`, `name`, `state`, `publishDate`, `createdAt`, `updatedAt`, `templatePath`, `domain`.
+Useful filterable properties for pages: `id`, `slug`, `name`, `state`, `publishDate`, `createdAt`, `updatedAt`, `templatePath`, `domain`.
 
 ## Source and extending
 
