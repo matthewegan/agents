@@ -1,0 +1,16 @@
+{
+  "eval_id": 2,
+  "eval_name": "ci-and-precommit-bitbucket",
+  "prompt": "Wire up Biome in CI and in a pre-commit hook for a TypeScript project hosted on Bitbucket. Requirements: (1) pre-commit should auto-fix safe issues on staged files and restage them, using lefthook (we don't use husky), (2) Bitbucket Pipelines should run Biome read-only on every pull request and produce a JUnit report that Bitbucket can display, (3) CI should only check files changed vs. the target branch, not the whole repo, to keep it fast. Give me the exact lefthook.yml entry and the exact bitbucket-pipelines.yml snippet, plus the minimal biome.jsonc changes (if any) needed to support --changed.",
+  "assertions": [
+    { "text": "lefthook.yml uses `stage_fixed: true` so fixed files get re-staged", "check": "lefthook.yml contains 'stage_fixed: true'" },
+    { "text": "lefthook.yml runs biome check with --write, --no-errors-on-unmatched, and --files-ignore-unknown", "check": "lefthook.yml contains 'biome check' AND '--write' AND '--no-errors-on-unmatched' AND '--files-ignore-unknown'" },
+    { "text": "lefthook.yml passes {staged_files} to biome", "check": "lefthook.yml contains '{staged_files}'" },
+    { "text": "bitbucket-pipelines.yml uses `biome ci` (not `biome check`)", "check": "bitbucket-pipelines.yml uses 'biome ci' as the CI command" },
+    { "text": "bitbucket-pipelines.yml scopes to changed files with --changed", "check": "bitbucket-pipelines.yml contains '--changed'" },
+    { "text": "bitbucket-pipelines.yml emits a JUnit report (via --reporter=junit + file/artifact)", "check": "bitbucket-pipelines.yml contains '--reporter=junit' and writes/uploads a *.xml file" },
+    { "text": "bitbucket-pipelines.yml exposes the JUnit file as a Pipelines artifact", "check": "bitbucket-pipelines.yml contains an 'artifacts:' block listing the junit file (or equivalent test-reports: mechanism)" },
+    { "text": "biome-config-patch.jsonc enables VCS integration with default branch", "check": "biome-config-patch.jsonc has vcs.enabled == true AND vcs.defaultBranch set" },
+    { "text": "Response warns about needing full git history / deep clone for --changed", "check": "response.md mentions fetch depth / shallow clone / clone.depth / deep clone caveat for --changed to work" }
+  ]
+}

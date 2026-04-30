@@ -1,0 +1,19 @@
+// biome.jsonc patch
+//
+// `--changed` requires Biome's VCS integration to be enabled and pointed at
+// git, with a default branch set so Biome knows what "changed" is relative to
+// when `--since` isn't provided. On CI we always pass `--since=origin/$TARGET`
+// explicitly, but `vcs.enabled: true` is still required for `--changed` to
+// work at all.
+//
+// Merge the following keys into your existing biome.jsonc. If you already
+// have a "vcs" block, just ensure these three fields are set.
+
+{
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "defaultBranch": "main",
+    "useIgnoreFile": true
+  }
+}

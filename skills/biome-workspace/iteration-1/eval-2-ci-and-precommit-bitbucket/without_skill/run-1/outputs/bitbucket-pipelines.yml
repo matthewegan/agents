@@ -1,0 +1,45 @@
+# bitbucket-pipelines.yml
+#
+# CI runs Biome read-only on every pull request, restricted to files changed
+# against the PR's target branch (BITBUCKET_PR_DESTINATION_BRANCH).
+#
+# Key points:
+# - `biome ci --changed --since=origin/$TARGET` only checks files that differ
+#   from the target branch, keeping runtime proportional to the PR size.
+# - `--reporter=junit` emits a JUnit XML report; Bitbucket Pipelines auto-
+#   discovers JUnit files under `test-results/*.xml` and renders them on the
+#   pipeline's "Tests" tab.
+# - We fetch the target branch explicitly because Bitbucket's default clone
+#   depth is shallow and won't contain it otherwise. `git fetch --no-tags
+#   --depth=50 origin <branch>` is enough for a typical PR; increase the
+#   depth if your PRs routinely diverge further.
+# - `biome ci` is the read-only CI entry point: it never writes and exits
+#   non-zero on any formatter/lint/assist diagnostic.
+
+image: node:20
+
+definitions:
+  caches:
+    npm: ~/.npm
+
+pipelines:
+  pull-requests:
+    '**':
+      - step:
+          name: Biome (changed files vs target)
+          caches:
+            - npm
+            - node
+          script:
+            - export TARGET="${BITBUCKET_PR_DESTINATION_BRANCH}"
+            - git fetch --no-tags --depth=50 origin "+refs/heads/${TARGET}:refs/remotes/origin/${TARGET}"
+            - npm ci
+            - mkdir -p test-results
+            - npx biome ci
+                --changed
+                --since="origin/${TARGET}"
+                --reporter=junit
+                --no-errors-on-unmatched
+                > test-results/biome-junit.xml
+          artifacts:
+            - test-results/**

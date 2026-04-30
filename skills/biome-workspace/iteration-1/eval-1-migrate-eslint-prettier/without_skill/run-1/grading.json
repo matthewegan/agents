@@ -1,0 +1,60 @@
+{
+  "expectations": [
+    {
+      "text": "Gives exact `biome migrate prettier --write` command",
+      "passed": true,
+      "evidence": "found"
+    },
+    {
+      "text": "Gives exact `biome migrate eslint --write` command",
+      "passed": true,
+      "evidence": "found"
+    },
+    {
+      "text": "Lists old config files to delete (eslint.config.js + .prettierrc.json at minimum)",
+      "passed": true,
+      "evidence": "mentions eslint config file: True; mentions prettierrc: True"
+    },
+    {
+      "text": "Lists packages to uninstall (eslint + prettier + @typescript-eslint/* or eslint-plugin-unicorn)",
+      "passed": true,
+      "evidence": "remove cmd: True; eslint: True; prettier: True; @typescript-eslint: True; unicorn: True"
+    },
+    {
+      "text": "package.json scripts block uses `biome check` and `biome ci`",
+      "passed": true,
+      "evidence": "'biome check' present: True; 'biome ci' present: True"
+    },
+    {
+      "text": "Updated lint-staged config uses `biome check --write` with `--no-errors-on-unmatched`",
+      "passed": true,
+      "evidence": "lint-staged: True; biome check --write: True; --no-errors-on-unmatched: True"
+    },
+    {
+      "text": "Gotchas section mentions Biome's default indent is tab",
+      "passed": false,
+      "evidence": "'tab' in text: False; 'default' in text: True"
+    },
+    {
+      "text": "Gotchas section mentions `migrate eslint` disables recommended:true or replaces it",
+      "passed": true,
+      "evidence": "'recommended' mentioned: True; coupled with disable/replaces/overwrites/explicit-list keywords"
+    },
+    {
+      "text": "Mentions ESLint YAML configs are not supported by migrate",
+      "passed": false,
+      "evidence": "'yaml' in text: True; with support-negation or convert keyword"
+    },
+    {
+      "text": "Mentions ESLint kebab-case vs Biome camelCase rule names",
+      "passed": false,
+      "evidence": "'camelCase' present: False; 'kebab-case' present: False"
+    }
+  ],
+  "summary": {
+    "pass_rate": 0.7,
+    "passed": 7,
+    "failed": 3,
+    "total": 10
+  }
+}

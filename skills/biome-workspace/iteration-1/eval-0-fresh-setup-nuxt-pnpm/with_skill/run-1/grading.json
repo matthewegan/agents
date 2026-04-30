@@ -1,0 +1,55 @@
+{
+  "expectations": [
+    {
+      "text": "biome.jsonc pins $schema to Biome 2.x",
+      "passed": true,
+      "evidence": "$schema = 'https://biomejs.dev/schemas/2.4.13/schema.json'"
+    },
+    {
+      "text": "Formatter indent is 2-space",
+      "passed": true,
+      "evidence": "formatter.indentStyle='space', indentWidth=2"
+    },
+    {
+      "text": "Formatter lineWidth is 100",
+      "passed": true,
+      "evidence": "formatter.lineWidth=100"
+    },
+    {
+      "text": "JS formatter uses single quotes, no semicolons, trailing commas all",
+      "passed": true,
+      "evidence": "quoteStyle='single', semicolons='asNeeded', trailingCommas='all'"
+    },
+    {
+      "text": "Tailwind v4 directives enabled (css.parser.tailwindDirectives: true)",
+      "passed": true,
+      "evidence": "css.parser.tailwindDirectives=True"
+    },
+    {
+      "text": "Vue files get an override disabling noise-prone rules (useConst/useImportType/noUnused*)",
+      "passed": true,
+      "evidence": "vue override disables 4 of the 4 target rules"
+    },
+    {
+      "text": "Nuxt build output (.nuxt + .output) excluded from files.includes",
+      "passed": true,
+      "evidence": "files.includes has 9 entries; .nuxt present: True; .output present: True"
+    },
+    {
+      "text": "package.json scripts include format, lint, check, and ci invoking biome",
+      "passed": true,
+      "evidence": "script keys present: ['check', 'check:fix', 'ci', 'format', 'lint', 'lint:fix']; missing from required set: []; biome-invoking scripts: 6"
+    },
+    {
+      "text": "Response calls out that Vue support is experimental / partial",
+      "passed": true,
+      "evidence": "response.md length=6053; contains 'vue': True; contains one of the experimental keywords: True"
+    }
+  ],
+  "summary": {
+    "pass_rate": 1,
+    "passed": 9,
+    "failed": 0,
+    "total": 9
+  }
+}

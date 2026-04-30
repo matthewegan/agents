@@ -1,0 +1,44 @@
+# bitbucket-pipelines.yml
+# Runs Biome read-only on every PR, scoped to files changed vs. the target
+# branch, and publishes a JUnit report Bitbucket renders on the PR.
+image: node:22
+
+definitions:
+  caches:
+    # Built-in `node` cache covers node_modules.
+    pnpm: $BITBUCKET_CLONE_DIR/.pnpm-store
+
+  steps:
+    - step: &biome-ci
+        name: Biome
+        caches:
+          - node
+          - pnpm
+        # `--changed --since=origin/$BITBUCKET_PR_DESTINATION_BRANCH` needs
+        # full git history. Bitbucket's default is a shallow clone (depth 50);
+        # bump it so the merge-base resolves.
+        clone:
+          depth: full
+        script:
+          - corepack enable && corepack prepare pnpm@latest --activate
+          - pnpm install --frozen-lockfile
+          # Make sure the base branch ref exists locally so `--since` works.
+          - git fetch --no-tags origin "+refs/heads/${BITBUCKET_PR_DESTINATION_BRANCH}:refs/remotes/origin/${BITBUCKET_PR_DESTINATION_BRANCH}"
+          # `biome ci` is strictly read-only, emits the JUnit file Bitbucket
+          # picks up, and is scoped to changed files for speed.
+          - >
+            pnpm exec biome ci .
+            --changed
+            --since=origin/${BITBUCKET_PR_DESTINATION_BRANCH}
+            --reporter=junit
+            --reporter-file=test-reports/biome.junit.xml
+        # Bitbucket auto-discovers JUnit XML under test-reports/ and renders
+        # results on the pull request page. Keep the artifact too so it can be
+        # downloaded from the pipeline.
+        artifacts:
+          - test-reports/biome.junit.xml
+
+pipelines:
+  pull-requests:
+    '**':
+      - step: *biome-ci

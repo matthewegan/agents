@@ -1,0 +1,15 @@
+# lefthook.yml (at repo root)
+# Install once with: npx lefthook install
+pre-commit:
+  parallel: true
+  commands:
+    biome:
+      # Only run on files Biome understands. `d.cts`/`d.mts` caught by the
+      # `.ts` glob already; list them if your team commits them explicitly.
+      glob: "*.{js,ts,cjs,mjs,jsx,tsx,json,jsonc,css,graphql,gql}"
+      # `check` (not `ci`) so we can --write; safe fixes only (no --unsafe).
+      # --no-errors-on-unmatched: empty filtered list must not fail the commit.
+      # --files-ignore-unknown=true: silently skip anything Biome can't parse.
+      run: npx @biomejs/biome check --write --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
+      # Re-add files that Biome rewrote so the fixes land in this commit.
+      stage_fixed: true

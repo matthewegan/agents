@@ -1,0 +1,17 @@
+{
+  "eval_id": 1,
+  "eval_name": "migrate-eslint-prettier",
+  "prompt": "We want to replace our ESLint + Prettier setup with Biome on a medium-sized TypeScript monorepo. We use pnpm workspaces, flat ESLint config (eslint.config.js with @typescript-eslint/eslint-plugin and eslint-plugin-unicorn), and .prettierrc.json with 2-space indent, single quotes, trailing commas, and 120-col line width. Walk me through the migration end-to-end: the commands I run, what files to delete, which packages to uninstall, what to update in package.json scripts and the pre-commit hook (we use husky + lint-staged), and any gotchas I should watch for during or after the migration. Don't hand-wave — I want the exact commands.",
+  "assertions": [
+    { "text": "Gives exact `biome migrate prettier --write` command", "check": "migration-guide.md contains 'biome migrate prettier --write'" },
+    { "text": "Gives exact `biome migrate eslint --write` command", "check": "migration-guide.md contains 'biome migrate eslint --write'" },
+    { "text": "Lists old config files to delete (eslint.config.js + .prettierrc.json at minimum)", "check": "migration-guide.md mentions deleting eslint.config.js AND .prettierrc.json (or .prettierrc* glob)" },
+    { "text": "Lists packages to uninstall including @typescript-eslint/* and eslint-plugin-unicorn", "check": "migration-guide.md contains a pnpm remove / uninstall block naming eslint, prettier, and at least one of @typescript-eslint/* or eslint-plugin-unicorn" },
+    { "text": "package.json scripts block uses biome subcommands (check and/or ci)", "check": "migration-guide.md contains a scripts JSON block referencing 'biome check' and 'biome ci'" },
+    { "text": "Updated lint-staged config uses `biome check --write` with `--no-errors-on-unmatched`", "check": "migration-guide.md contains a lint-staged section with 'biome check --write' AND '--no-errors-on-unmatched'" },
+    { "text": "Gotchas section mentions Biome's default indent is tab", "check": "migration-guide.md mentions Biome defaults to tabs / tab indent (requires indentStyle=space to match Prettier)" },
+    { "text": "Gotchas section mentions `migrate eslint` disables recommended:true", "check": "migration-guide.md mentions that `biome migrate eslint` sets recommended:false OR replaces recommended with an explicit rule list" },
+    { "text": "Mentions ESLint YAML configs are not supported by migrate", "check": "migration-guide.md explicitly flags that YAML ESLint configs aren't migrated" },
+    { "text": "Mentions ESLint kebab-case vs Biome camelCase rule names", "check": "migration-guide.md mentions Biome uses camelCase rule names while ESLint uses kebab-case" }
+  ]
+}

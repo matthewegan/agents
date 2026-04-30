@@ -32,6 +32,37 @@ If the user's request mentions "PR", "pull request", "repo", "CI", "pipeline", "
 
 Never run destructive or stateful commands (create/merge/approve PR, trigger pipeline) against the wrong platform because of a guess.
 
+## Quick reference — task → command
+
+Look here first. If your task is in this table, run the command shown and skip the rest of the doc. Replace `WS/REPO` with the workspace/repo slug (e.g. `myws/myrepo`) and `ID` with the PR id.
+
+| Task | Command |
+| --- | --- |
+| Verify auth | `bb auth check` |
+| Find workspace/repo from cwd | `git remote get-url origin` then parse `bitbucket.org/WS/REPO` |
+| List open PRs | `bb pr list WS/REPO --state OPEN` |
+| Find PR for current branch | `bb pr list WS/REPO --state OPEN \| jq '.[] \| select(.source.branch.name=="BRANCH")'` |
+| Read PR metadata | `bb pr get WS/REPO ID` |
+| Read PR diff | `bb pr diff WS/REPO ID` |
+| Read PR comments | `bb pr comments WS/REPO ID` |
+| Create PR | `bb pr create WS/REPO --source BR --dest main --title T [--body B]` |
+| Approve PR | `bb pr approve WS/REPO ID` |
+| Unapprove PR | `bb raw DELETE /repositories/WS/REPO/pullrequests/ID/approve` |
+| Decline PR | `bb raw POST /repositories/WS/REPO/pullrequests/ID/decline` |
+| Merge PR | `bb pr merge WS/REPO ID [--strategy squash]` |
+| Update PR title/description | `bb raw PUT /repositories/WS/REPO/pullrequests/ID --data '{"title":"...","description":"..."}'` |
+| Post a PR comment | `bb raw POST /repositories/WS/REPO/pullrequests/ID/comments --data '{"content":{"raw":"..."}}'` |
+| Post an inline (file/line) comment | `bb raw POST /repositories/WS/REPO/pullrequests/ID/comments --data '{"content":{"raw":"..."},"inline":{"path":"src/foo.py","to":42}}'` |
+| Reply to a PR comment | `bb raw POST /repositories/WS/REPO/pullrequests/ID/comments --data '{"content":{"raw":"..."},"parent":{"id":COMMENT_ID}}'` |
+| List PR activity (approvals, status changes) | `bb raw GET /repositories/WS/REPO/pullrequests/ID/activity` |
+| List branches | `bb branch list WS/REPO` |
+| Get a commit | `bb commit get WS/REPO SHA` |
+| List recent pipelines | `bb pipeline list WS/REPO --limit 5` |
+| Read pipeline step logs | `bb pipeline logs WS/REPO PIPELINE_UUID STEP_UUID` |
+| Anything else | `bb raw METHOD /path` (see "Escape hatches" below) |
+
+Mutating commands (`create`, `approve`, `merge`, `decline`, `raw POST/PUT/PATCH/DELETE`) require explicit user confirmation — see "Safety rules" near the end.
+
 ## Prerequisites
 
 ### Installation
@@ -113,11 +144,13 @@ bb repo get WORKSPACE/REPO
 bb pr list WORKSPACE/REPO [--state OPEN|MERGED|DECLINED|SUPERSEDED] [--limit N]
 bb pr get WORKSPACE/REPO PR_ID
 bb pr diff WORKSPACE/REPO PR_ID                                    # raw diff text
-bb pr comments WORKSPACE/REPO PR_ID [--limit N]
+bb pr comments WORKSPACE/REPO PR_ID [--limit N]                    # read-only; post via `bb raw`
 bb pr create WORKSPACE/REPO --source BR --dest BR --title T [--body B] [--close-source]
 bb pr approve WORKSPACE/REPO PR_ID
 bb pr merge WORKSPACE/REPO PR_ID [--strategy merge_commit|squash|fast_forward]
 ```
+
+Only `create`, `approve`, and `merge` are wrapped as PR mutations. **Posting comments, declining, updating title/description, and unapproving go through `bb raw`** — see the quick reference table above for one-liners.
 
 ### Branches and commits
 
@@ -168,6 +201,54 @@ bb pr create myws/myrepo \
   --dest main \
   --title "Add x" \
   --body "Closes https://myws.atlassian.net/browse/ENG-123"
+```
+
+For a multi-line body, pass it via a shell variable so newlines survive:
+
+```sh
+BODY=$(cat <<'EOF'
+## Summary
+- thing one
+- thing two
+
+## Test plan
+- ran X
+EOF
+)
+bb pr create myws/myrepo --source feature/x --dest main --title "Add x" --body "$BODY"
+```
+
+### Find the open PR for the current branch
+
+```sh
+BRANCH=$(git branch --show-current)
+bb pr list myws/myrepo --state OPEN \
+  | jq --arg b "$BRANCH" '.[] | select(.source.branch.name == $b) | {id, title, state}'
+```
+
+### Post a comment on a PR
+
+```sh
+# Top-level comment
+bb raw POST /repositories/myws/myrepo/pullrequests/42/comments \
+  --data '{"content":{"raw":"Looks good — one nit on naming."}}'
+
+# Inline comment on a specific file/line (use `to` for the new side, `from` for the old side)
+bb raw POST /repositories/myws/myrepo/pullrequests/42/comments \
+  --data '{"content":{"raw":"this branch is unreachable"},"inline":{"path":"src/foo.py","to":117}}'
+
+# Reply to an existing comment
+bb raw POST /repositories/myws/myrepo/pullrequests/42/comments \
+  --data '{"content":{"raw":"Agreed, will fix."},"parent":{"id":987654321}}'
+```
+
+### Decline or update a PR
+
+```sh
+bb raw POST /repositories/myws/myrepo/pullrequests/42/decline
+
+bb raw PUT /repositories/myws/myrepo/pullrequests/42 \
+  --data '{"title":"new title","description":"new body"}'
 ```
 
 ### Inspect a failing pipeline

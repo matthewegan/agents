@@ -1,0 +1,26 @@
+{
+  "skill_name": "biome",
+  "evals": [
+    {
+      "id": 0,
+      "name": "fresh-setup-nuxt-pnpm",
+      "prompt": "I'm setting up code quality tooling on a new Nuxt 4 project that uses pnpm. There's currently no Prettier, no ESLint, nothing. The existing code is written in a specific style: 2-space indent, single quotes, no semicolons, trailing commas everywhere, and I'd like a line width around 100. We use TailwindCSS v4 (with the new @theme directive) and have a mix of .ts, .vue, and .css files. Write me a complete biome.jsonc (tailored for this project — not a generic starter) and the package.json scripts I should add. Skip the install command — I'll run `pnpm add -D -E @biomejs/biome` myself. Also briefly call out anything I should know about Biome's Vue support so I'm not surprised.",
+      "expected_output": "A biome.jsonc that matches the requested style + Tailwind v4 directives + Vue overrides; package.json scripts (format, lint, check, ci); a short note on Vue support being experimental + recommended overrides.",
+      "files": []
+    },
+    {
+      "id": 1,
+      "name": "migrate-eslint-prettier",
+      "prompt": "We want to replace our ESLint + Prettier setup with Biome on a medium-sized TypeScript monorepo. We use pnpm workspaces, flat ESLint config (eslint.config.js with @typescript-eslint/eslint-plugin and eslint-plugin-unicorn), and .prettierrc.json with 2-space indent, single quotes, trailing commas, and 120-col line width. Walk me through the migration end-to-end: the commands I run, what files to delete, which packages to uninstall, what to update in package.json scripts and the pre-commit hook (we use husky + lint-staged), and any gotchas I should watch for during or after the migration. Don't hand-wave — I want the exact commands.",
+      "expected_output": "Exact commands for `biome migrate prettier/eslint --write`, `rm` commands for old configs, `pnpm remove` with the right package list, updated package.json scripts block, updated lint-staged config, and concrete gotchas (tab default, recommended:true getting disabled, ESLint plugins not all supported, YAML configs, kebab→camelCase rule names, etc.).",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "ci-and-precommit-bitbucket",
+      "prompt": "Wire up Biome in CI and in a pre-commit hook for a TypeScript project hosted on Bitbucket. Requirements: (1) pre-commit should auto-fix safe issues on staged files and restage them, using lefthook (we don't use husky), (2) Bitbucket Pipelines should run Biome read-only on every pull request and produce a JUnit report that Bitbucket can display, (3) CI should only check files changed vs. the target branch, not the whole repo, to keep it fast. Give me the exact lefthook.yml entry and the exact bitbucket-pipelines.yml snippet, plus the minimal biome.jsonc changes (if any) needed to support --changed.",
+      "expected_output": "lefthook.yml pre-commit entry that runs `biome check --write --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}` with `stage_fixed: true`; bitbucket-pipelines.yml step using node image + pnpm install + `biome ci --changed --since=... --reporter=junit --reporter-file=...` with artifact upload; note about `vcs.enabled: true`, `vcs.defaultBranch`, and fetch depth for --changed to work.",
+      "files": []
+    }
+  ]
+}

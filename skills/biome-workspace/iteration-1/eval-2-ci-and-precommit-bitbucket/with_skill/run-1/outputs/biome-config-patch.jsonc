@@ -1,0 +1,17 @@
+// Minimal additions to biome.jsonc to support --staged (pre-commit hook) and
+// --changed (Bitbucket Pipelines PR job). Merge these keys into your existing
+// config; no other changes are required.
+{
+  "vcs": {
+    // Required for both --staged and --changed. Without this, Biome has no
+    // way to ask git what's staged or what changed.
+    "enabled": true,
+    "clientKind": "git",
+    // Optional but recommended: respect .gitignore automatically.
+    "useIgnoreFile": true,
+    // Used by --changed when --since is not passed. The Bitbucket step below
+    // passes --since=origin/$BITBUCKET_PR_DESTINATION_BRANCH explicitly, so
+    // this is the fallback for local `biome ci --changed` runs.
+    "defaultBranch": "main"
+  }
+}

@@ -1,0 +1,453 @@
+{
+  "metadata": {
+    "skill_name": "biome",
+    "skill_path": "<path/to/skill>",
+    "executor_model": "<model-name>",
+    "analyzer_model": "<model-name>",
+    "timestamp": "2026-04-24T04:14:12Z",
+    "evals_run": [
+      0,
+      1,
+      2
+    ],
+    "runs_per_configuration": 3
+  },
+  "runs": [
+    {
+      "eval_id": 0,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1,
+        "passed": 9,
+        "failed": 0,
+        "total": 9,
+        "time_seconds": 87.5,
+        "tokens": 48258,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "biome.jsonc pins $schema to Biome 2.x",
+          "passed": true,
+          "evidence": "$schema = 'https://biomejs.dev/schemas/2.4.13/schema.json'"
+        },
+        {
+          "text": "Formatter indent is 2-space",
+          "passed": true,
+          "evidence": "formatter.indentStyle='space', indentWidth=2"
+        },
+        {
+          "text": "Formatter lineWidth is 100",
+          "passed": true,
+          "evidence": "formatter.lineWidth=100"
+        },
+        {
+          "text": "JS formatter uses single quotes, no semicolons, trailing commas all",
+          "passed": true,
+          "evidence": "quoteStyle='single', semicolons='asNeeded', trailingCommas='all'"
+        },
+        {
+          "text": "Tailwind v4 directives enabled (css.parser.tailwindDirectives: true)",
+          "passed": true,
+          "evidence": "css.parser.tailwindDirectives=True"
+        },
+        {
+          "text": "Vue files get an override disabling noise-prone rules (useConst/useImportType/noUnused*)",
+          "passed": true,
+          "evidence": "vue override disables 4 of the 4 target rules"
+        },
+        {
+          "text": "Nuxt build output (.nuxt + .output) excluded from files.includes",
+          "passed": true,
+          "evidence": "files.includes has 9 entries; .nuxt present: True; .output present: True"
+        },
+        {
+          "text": "package.json scripts include format, lint, check, and ci invoking biome",
+          "passed": true,
+          "evidence": "script keys present: ['check', 'check:fix', 'ci', 'format', 'lint', 'lint:fix']; missing from required set: []; biome-invoking scripts: 6"
+        },
+        {
+          "text": "Response calls out that Vue support is experimental / partial",
+          "passed": true,
+          "evidence": "response.md length=6053; contains 'vue': True; contains one of the experimental keywords: True"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.9,
+        "passed": 9,
+        "failed": 1,
+        "total": 10,
+        "time_seconds": 160.1,
+        "tokens": 57294,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Gives exact `biome migrate prettier --write` command",
+          "passed": true,
+          "evidence": "found"
+        },
+        {
+          "text": "Gives exact `biome migrate eslint --write` command",
+          "passed": true,
+          "evidence": "found"
+        },
+        {
+          "text": "Lists old config files to delete (eslint.config.js + .prettierrc.json at minimum)",
+          "passed": true,
+          "evidence": "mentions eslint config file: True; mentions prettierrc: True"
+        },
+        {
+          "text": "Lists packages to uninstall (eslint + prettier + @typescript-eslint/* or eslint-plugin-unicorn)",
+          "passed": true,
+          "evidence": "remove cmd: True; eslint: True; prettier: True; @typescript-eslint: True; unicorn: True"
+        },
+        {
+          "text": "package.json scripts block uses `biome check` and `biome ci`",
+          "passed": true,
+          "evidence": "'biome check' present: True; 'biome ci' present: True"
+        },
+        {
+          "text": "Updated lint-staged config uses `biome check --write` with `--no-errors-on-unmatched`",
+          "passed": true,
+          "evidence": "lint-staged: True; biome check --write: True; --no-errors-on-unmatched: True"
+        },
+        {
+          "text": "Gotchas section mentions Biome's default indent is tab",
+          "passed": true,
+          "evidence": "'tab' in text: True; 'default' in text: True"
+        },
+        {
+          "text": "Gotchas section mentions `migrate eslint` disables recommended:true or replaces it",
+          "passed": true,
+          "evidence": "'recommended' mentioned: True; coupled with disable/replaces/overwrites/explicit-list keywords"
+        },
+        {
+          "text": "Mentions ESLint YAML configs are not supported by migrate",
+          "passed": false,
+          "evidence": "'yaml' in text: True; with support-negation or convert keyword"
+        },
+        {
+          "text": "Mentions ESLint kebab-case vs Biome camelCase rule names",
+          "passed": true,
+          "evidence": "'camelCase' present: True; 'kebab-case' present: True"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1,
+        "passed": 9,
+        "failed": 0,
+        "total": 9,
+        "time_seconds": 87.9,
+        "tokens": 53668,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "lefthook.yml uses `stage_fixed: true`",
+          "passed": true,
+          "evidence": "present"
+        },
+        {
+          "text": "lefthook runs `biome check --write --no-errors-on-unmatched --files-ignore-unknown`",
+          "passed": true,
+          "evidence": "has check:True; --write:True; --no-errors-on-unmatched:True; --files-ignore-unknown:True"
+        },
+        {
+          "text": "lefthook passes {staged_files} to biome",
+          "passed": true,
+          "evidence": "present"
+        },
+        {
+          "text": "bitbucket-pipelines.yml uses `biome ci` (not `biome check`)",
+          "passed": true,
+          "evidence": "'biome ci' present: True"
+        },
+        {
+          "text": "bitbucket-pipelines.yml scopes to changed files with --changed",
+          "passed": true,
+          "evidence": "present"
+        },
+        {
+          "text": "bitbucket-pipelines.yml emits a JUnit report",
+          "passed": true,
+          "evidence": "--reporter=junit present: True; xml artifact path mentioned: True"
+        },
+        {
+          "text": "JUnit file exposed as a Pipelines artifact (or via test-reports/)",
+          "passed": true,
+          "evidence": "'artifacts:' present: True; 'test-reports' present: True; 'test-results' present: False"
+        },
+        {
+          "text": "biome-config-patch enables vcs.enabled:true with defaultBranch set",
+          "passed": true,
+          "evidence": "vcs.enabled=True, vcs.defaultBranch='main'"
+        },
+        {
+          "text": "Response warns about needing full git history / deep clone for --changed",
+          "passed": true,
+          "evidence": "response mentions clone depth / shallow keyword: True"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 0,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.6666666666666666,
+        "passed": 6,
+        "failed": 3,
+        "total": 9,
+        "time_seconds": 81.3,
+        "tokens": 33837,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "biome.jsonc pins $schema to Biome 2.x",
+          "passed": true,
+          "evidence": "$schema = 'https://biomejs.dev/schemas/2.0.0/schema.json'"
+        },
+        {
+          "text": "Formatter indent is 2-space",
+          "passed": true,
+          "evidence": "formatter.indentStyle='space', indentWidth=2"
+        },
+        {
+          "text": "Formatter lineWidth is 100",
+          "passed": true,
+          "evidence": "formatter.lineWidth=100"
+        },
+        {
+          "text": "JS formatter uses single quotes, no semicolons, trailing commas all",
+          "passed": true,
+          "evidence": "quoteStyle='single', semicolons='asNeeded', trailingCommas='all'"
+        },
+        {
+          "text": "Tailwind v4 directives enabled (css.parser.tailwindDirectives: true)",
+          "passed": false,
+          "evidence": "css.parser.tailwindDirectives=None"
+        },
+        {
+          "text": "Vue files get an override disabling noise-prone rules (useConst/useImportType/noUnused*)",
+          "passed": false,
+          "evidence": "vue override found but doesn't disable any of the 4 target rules"
+        },
+        {
+          "text": "Nuxt build output (.nuxt + .output) excluded from files.includes",
+          "passed": true,
+          "evidence": "files.includes has 12 entries; .nuxt present: True; .output present: True"
+        },
+        {
+          "text": "package.json scripts include format, lint, check, and ci invoking biome",
+          "passed": false,
+          "evidence": "script keys present: ['check', 'check:ci', 'check:fix', 'format', 'format:check', 'lint', 'lint:fix']; missing from required set: ['ci']; biome-invoking scripts: 7"
+        },
+        {
+          "text": "Response calls out that Vue support is experimental / partial",
+          "passed": true,
+          "evidence": "response.md length=7559; contains 'vue': True; contains one of the experimental keywords: True"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.7,
+        "passed": 7,
+        "failed": 3,
+        "total": 10,
+        "time_seconds": 127.2,
+        "tokens": 35228,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Gives exact `biome migrate prettier --write` command",
+          "passed": true,
+          "evidence": "found"
+        },
+        {
+          "text": "Gives exact `biome migrate eslint --write` command",
+          "passed": true,
+          "evidence": "found"
+        },
+        {
+          "text": "Lists old config files to delete (eslint.config.js + .prettierrc.json at minimum)",
+          "passed": true,
+          "evidence": "mentions eslint config file: True; mentions prettierrc: True"
+        },
+        {
+          "text": "Lists packages to uninstall (eslint + prettier + @typescript-eslint/* or eslint-plugin-unicorn)",
+          "passed": true,
+          "evidence": "remove cmd: True; eslint: True; prettier: True; @typescript-eslint: True; unicorn: True"
+        },
+        {
+          "text": "package.json scripts block uses `biome check` and `biome ci`",
+          "passed": true,
+          "evidence": "'biome check' present: True; 'biome ci' present: True"
+        },
+        {
+          "text": "Updated lint-staged config uses `biome check --write` with `--no-errors-on-unmatched`",
+          "passed": true,
+          "evidence": "lint-staged: True; biome check --write: True; --no-errors-on-unmatched: True"
+        },
+        {
+          "text": "Gotchas section mentions Biome's default indent is tab",
+          "passed": false,
+          "evidence": "'tab' in text: False; 'default' in text: True"
+        },
+        {
+          "text": "Gotchas section mentions `migrate eslint` disables recommended:true or replaces it",
+          "passed": true,
+          "evidence": "'recommended' mentioned: True; coupled with disable/replaces/overwrites/explicit-list keywords"
+        },
+        {
+          "text": "Mentions ESLint YAML configs are not supported by migrate",
+          "passed": false,
+          "evidence": "'yaml' in text: True; with support-negation or convert keyword"
+        },
+        {
+          "text": "Mentions ESLint kebab-case vs Biome camelCase rule names",
+          "passed": false,
+          "evidence": "'camelCase' present: False; 'kebab-case' present: False"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1,
+        "passed": 9,
+        "failed": 0,
+        "total": 9,
+        "time_seconds": 75.4,
+        "tokens": 32528,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "lefthook.yml uses `stage_fixed: true`",
+          "passed": true,
+          "evidence": "present"
+        },
+        {
+          "text": "lefthook runs `biome check --write --no-errors-on-unmatched --files-ignore-unknown`",
+          "passed": true,
+          "evidence": "has check:True; --write:True; --no-errors-on-unmatched:True; --files-ignore-unknown:True"
+        },
+        {
+          "text": "lefthook passes {staged_files} to biome",
+          "passed": true,
+          "evidence": "present"
+        },
+        {
+          "text": "bitbucket-pipelines.yml uses `biome ci` (not `biome check`)",
+          "passed": true,
+          "evidence": "'biome ci' present: True"
+        },
+        {
+          "text": "bitbucket-pipelines.yml scopes to changed files with --changed",
+          "passed": true,
+          "evidence": "present"
+        },
+        {
+          "text": "bitbucket-pipelines.yml emits a JUnit report",
+          "passed": true,
+          "evidence": "--reporter=junit present: True; xml artifact path mentioned: True"
+        },
+        {
+          "text": "JUnit file exposed as a Pipelines artifact (or via test-reports/)",
+          "passed": true,
+          "evidence": "'artifacts:' present: True; 'test-reports' present: False; 'test-results' present: True"
+        },
+        {
+          "text": "biome-config-patch enables vcs.enabled:true with defaultBranch set",
+          "passed": true,
+          "evidence": "vcs.enabled=True, vcs.defaultBranch='main'"
+        },
+        {
+          "text": "Response warns about needing full git history / deep clone for --changed",
+          "passed": true,
+          "evidence": "response mentions clone depth / shallow keyword: True"
+        }
+      ],
+      "notes": []
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 0.9667,
+        "stddev": 0.0577,
+        "min": 0.9,
+        "max": 1
+      },
+      "time_seconds": {
+        "mean": 111.8333,
+        "stddev": 41.8006,
+        "min": 87.5,
+        "max": 160.1
+      },
+      "tokens": {
+        "mean": 53073.3333,
+        "stddev": 4547.2569,
+        "min": 48258,
+        "max": 57294
+      }
+    },
+    "without_skill": {
+      "pass_rate": {
+        "mean": 0.7889,
+        "stddev": 0.1836,
+        "min": 0.6667,
+        "max": 1
+      },
+      "time_seconds": {
+        "mean": 94.6333,
+        "stddev": 28.3574,
+        "min": 75.4,
+        "max": 127.2
+      },
+      "tokens": {
+        "mean": 33864.3333,
+        "stddev": 1350.2075,
+        "min": 32528,
+        "max": 35228
+      }
+    },
+    "delta": {
+      "pass_rate": "+0.18",
+      "time_seconds": "+17.2",
+      "tokens": "+19209"
+    }
+  },
+  "notes": []
+}

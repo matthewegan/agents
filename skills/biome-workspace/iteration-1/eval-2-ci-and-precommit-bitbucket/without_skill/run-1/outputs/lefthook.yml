@@ -1,0 +1,19 @@
+# lefthook.yml
+# Pre-commit: run Biome's safe auto-fixer on the staged files only, then
+# re-stage whatever it rewrote so the commit includes the fixed content.
+#
+# Notes:
+# - `biome check --write` applies formatter + safe lint fixes + safe import
+#   organization. It does NOT apply "unsafe" fixes (use --write --unsafe for
+#   those, which we deliberately don't do on commit).
+# - `{staged_files}` is expanded by lefthook to the list of staged paths that
+#   matched `glob`. `stage_fixed: true` re-adds any file the command modified.
+# - We scope globs to files Biome actually handles to avoid no-op invocations.
+
+pre-commit:
+  parallel: true
+  commands:
+    biome:
+      glob: "*.{js,jsx,ts,tsx,mjs,cjs,mts,cts,json,jsonc,css}"
+      run: npx biome check --write --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
+      stage_fixed: true

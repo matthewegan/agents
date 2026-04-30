@@ -1,0 +1,170 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.0.0/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true,
+    "defaultBranch": "main"
+  },
+  "files": {
+    "ignoreUnknown": true,
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/.nuxt",
+      "!**/.output",
+      "!**/.data",
+      "!**/dist",
+      "!**/coverage",
+      "!**/.nitro",
+      "!**/.cache",
+      "!**/drizzle",
+      "!**/*.min.js",
+      "!**/*.min.css",
+      "!pnpm-lock.yaml"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "useEditorconfig": false,
+    "formatWithErrors": false,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100,
+    "lineEnding": "lf"
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "jsxQuoteStyle": "double",
+      "semicolons": "asNeeded",
+      "trailingCommas": "all",
+      "arrowParentheses": "always",
+      "bracketSameLine": false,
+      "bracketSpacing": true,
+      "quoteProperties": "asNeeded"
+    }
+  },
+  "json": {
+    "formatter": {
+      "enabled": true,
+      "trailingCommas": "none"
+    },
+    "parser": {
+      "allowComments": true,
+      "allowTrailingCommas": true
+    }
+  },
+  "css": {
+    // Tailwind v4 uses @theme, @utility, @variant, @custom-variant, @apply, @source, etc.
+    // Biome's CSS parser accepts at-rules it doesn't know about, so these pass through fine.
+    "formatter": {
+      "enabled": true,
+      "quoteStyle": "single"
+    },
+    "parser": {
+      "cssModules": false
+    },
+    "linter": {
+      "enabled": true
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "style": {
+        "useConst": "error",
+        "useTemplate": "error",
+        "noUselessElse": "warn",
+        "useNodejsImportProtocol": "error"
+      },
+      "suspicious": {
+        "noExplicitAny": "warn",
+        "noConsole": {
+          "level": "warn",
+          "options": { "allow": ["warn", "error", "info"] }
+        }
+      },
+      "correctness": {
+        "noUnusedVariables": "warn",
+        "noUnusedImports": "warn"
+      },
+      "complexity": {
+        "noForEach": "off"
+      },
+      "a11y": {
+        // Nuxt/Vue templates are not analyzed by Biome; a11y rules mostly target JSX.
+        "recommended": true
+      }
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "overrides": [
+    {
+      // Vue SFCs: Biome 2.x parses <script lang="ts"> blocks but does NOT format <template> or <style>.
+      // Keep the script formatter aligned with our TS settings; skip linting rules that don't
+      // understand Vue's compiler macros or template-only usage so we don't get false positives.
+      "includes": ["**/*.vue"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            // defineProps/defineEmits/useRoute/etc. are auto-imported by Nuxt; Biome can't see that.
+            "noUndeclaredVariables": "off",
+            // Composables and components used only in <template> look unused to Biome.
+            "noUnusedVariables": "off",
+            "noUnusedImports": "off"
+          },
+          "style": {
+            // <script setup> top-level consts are "exported" via the compiler — don't flag them.
+            "useImportType": "off"
+          }
+        }
+      }
+    },
+    {
+      // Nuxt auto-imports (composables, components, server utils) are resolved at build time.
+      "includes": ["app/**/*.ts", "app/**/*.vue", "server/**/*.ts", "composables/**/*.ts"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUndeclaredVariables": "off"
+          }
+        }
+      }
+    },
+    {
+      // Config files often need default exports, console output, and CJS-ish patterns.
+      "includes": [
+        "nuxt.config.ts",
+        "drizzle.config.ts",
+        "*.config.ts",
+        "*.config.js",
+        "*.config.mjs"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          },
+          "style": {
+            "noDefaultExport": "off"
+          }
+        }
+      }
+    },
+    {
+      // Drizzle migrations are generated SQL-ish TS — don't fight the generator.
+      "includes": ["server/database/migrations/**", "drizzle/**"],
+      "formatter": { "enabled": false },
+      "linter": { "enabled": false }
+    }
+  ]
+}

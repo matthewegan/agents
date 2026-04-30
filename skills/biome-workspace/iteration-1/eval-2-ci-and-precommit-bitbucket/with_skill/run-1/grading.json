@@ -1,0 +1,55 @@
+{
+  "expectations": [
+    {
+      "text": "lefthook.yml uses `stage_fixed: true`",
+      "passed": true,
+      "evidence": "present"
+    },
+    {
+      "text": "lefthook runs `biome check --write --no-errors-on-unmatched --files-ignore-unknown`",
+      "passed": true,
+      "evidence": "has check:True; --write:True; --no-errors-on-unmatched:True; --files-ignore-unknown:True"
+    },
+    {
+      "text": "lefthook passes {staged_files} to biome",
+      "passed": true,
+      "evidence": "present"
+    },
+    {
+      "text": "bitbucket-pipelines.yml uses `biome ci` (not `biome check`)",
+      "passed": true,
+      "evidence": "'biome ci' present: True"
+    },
+    {
+      "text": "bitbucket-pipelines.yml scopes to changed files with --changed",
+      "passed": true,
+      "evidence": "present"
+    },
+    {
+      "text": "bitbucket-pipelines.yml emits a JUnit report",
+      "passed": true,
+      "evidence": "--reporter=junit present: True; xml artifact path mentioned: True"
+    },
+    {
+      "text": "JUnit file exposed as a Pipelines artifact (or via test-reports/)",
+      "passed": true,
+      "evidence": "'artifacts:' present: True; 'test-reports' present: True; 'test-results' present: False"
+    },
+    {
+      "text": "biome-config-patch enables vcs.enabled:true with defaultBranch set",
+      "passed": true,
+      "evidence": "vcs.enabled=True, vcs.defaultBranch='main'"
+    },
+    {
+      "text": "Response warns about needing full git history / deep clone for --changed",
+      "passed": true,
+      "evidence": "response mentions clone depth / shallow keyword: True"
+    }
+  ],
+  "summary": {
+    "pass_rate": 1,
+    "passed": 9,
+    "failed": 0,
+    "total": 9
+  }
+}

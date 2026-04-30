@@ -1,0 +1,16 @@
+{
+  "eval_id": 0,
+  "eval_name": "fresh-setup-nuxt-pnpm",
+  "prompt": "I'm setting up code quality tooling on a new Nuxt 4 project that uses pnpm. There's currently no Prettier, no ESLint, nothing. The existing code is written in a specific style: 2-space indent, single quotes, no semicolons, trailing commas everywhere, and I'd like a line width around 100. We use TailwindCSS v4 (with the new @theme directive) and have a mix of .ts, .vue, and .css files. Write me a complete biome.jsonc (tailored for this project — not a generic starter) and the package.json scripts I should add. Skip the install command — I'll run `pnpm add -D -E @biomejs/biome` myself. Also briefly call out anything I should know about Biome's Vue support so I'm not surprised.",
+  "assertions": [
+    { "text": "biome.jsonc pins $schema to Biome 2.x", "check": "biome.jsonc contains 'schemas/2.' in the $schema URL" },
+    { "text": "Formatter indent is 2-space", "check": "biome.jsonc has formatter.indentStyle == 'space' AND formatter.indentWidth == 2" },
+    { "text": "Formatter lineWidth is 100", "check": "biome.jsonc has formatter.lineWidth == 100" },
+    { "text": "JS formatter uses single quotes, no semicolons, trailing commas all", "check": "javascript.formatter has quoteStyle == 'single' AND semicolons == 'asNeeded' AND trailingCommas == 'all'" },
+    { "text": "Tailwind v4 directives enabled", "check": "biome.jsonc has css.parser.tailwindDirectives == true" },
+    { "text": "Vue files get an override disabling noise-prone rules", "check": "overrides contains an entry whose includes matches '**/*.vue' and disables at least one of: style.useConst, style.useImportType, correctness.noUnusedVariables, correctness.noUnusedImports" },
+    { "text": "Nuxt build output is excluded from files.includes", "check": "files.includes contains exclusion entries covering .nuxt and .output (either '!' or '!!' patterns)" },
+    { "text": "package.json scripts include format, lint, check, and ci entries", "check": "package.json.scripts.json has keys named format, lint, check, and ci that invoke biome subcommands" },
+    { "text": "Response calls out Vue support is experimental", "check": "response.md mentions that Biome's Vue support is experimental / partial / limited (key words: experimental, partial, partially, 2.3, v2.3, limited)" }
+  ]
+}
