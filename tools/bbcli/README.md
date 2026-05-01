@@ -60,6 +60,9 @@ if the token is bad.
 
 ## Commands
 
+`WORKSPACE/REPO` may be omitted from any command when run inside a Bitbucket
+Cloud clone — `bb` parses `git remote get-url origin` to fill it in.
+
 ```
 bb auth check
 
@@ -67,23 +70,23 @@ bb raw METHOD PATH [--query k=v]... [--data '{...}' | --data @body.json] [--prin
 bb paginate PATH [--query k=v]... [--limit N]
 
 bb repo list [--workspace WS] [--role ROLE] [--limit N]
-bb repo get WORKSPACE/REPO
+bb repo get [WORKSPACE/REPO]
 
-bb pr list WORKSPACE/REPO [--state OPEN|MERGED|DECLINED|SUPERSEDED] [--limit N]
-bb pr get WORKSPACE/REPO PR_ID
-bb pr diff WORKSPACE/REPO PR_ID
-bb pr comments WORKSPACE/REPO PR_ID [--limit N]
-bb pr create WORKSPACE/REPO --source BR --dest BR --title T [--body B] [--close-source]
-bb pr approve WORKSPACE/REPO PR_ID
-bb pr merge WORKSPACE/REPO PR_ID [--strategy merge_commit|squash|fast_forward]
+bb pr list [WORKSPACE/REPO] [--state OPEN|MERGED|DECLINED|SUPERSEDED] [--limit N]
+bb pr get [WORKSPACE/REPO] PR_ID
+bb pr diff [WORKSPACE/REPO] PR_ID
+bb pr comments [WORKSPACE/REPO] PR_ID [--limit N]
+bb pr create [WORKSPACE/REPO] --source BR --dest BR --title T [--body B] [--close-source]
+bb pr approve [WORKSPACE/REPO] PR_ID
+bb pr merge [WORKSPACE/REPO] PR_ID [--strategy merge_commit|squash|fast_forward]
 
-bb branch list WORKSPACE/REPO [--limit N]
+bb branch list [WORKSPACE/REPO] [--limit N]
 
-bb commit get WORKSPACE/REPO SHA
+bb commit get [WORKSPACE/REPO] SHA
 
-bb pipeline list WORKSPACE/REPO [--limit N]
-bb pipeline get WORKSPACE/REPO UUID
-bb pipeline logs WORKSPACE/REPO UUID STEP_UUID
+bb pipeline list [WORKSPACE/REPO] [--limit N]
+bb pipeline get [WORKSPACE/REPO] UUID
+bb pipeline logs [WORKSPACE/REPO] UUID STEP_UUID
 ```
 
 Run `bb --help` or `bb <group> --help` for full details.

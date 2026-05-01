@@ -32,9 +32,23 @@ If the user's request mentions "PR", "pull request", "repo", "CI", "pipeline", "
 
 Never run destructive or stateful commands (create/merge/approve PR, trigger pipeline) against the wrong platform because of a guess.
 
+## gh-cli false friends — read before typing
+
+`bb` is not `gh`. The most common failure mode is reaching for a `gh` command and getting a confusing error. Map your intent to the correct `bb` form:
+
+| You'll reach for | What `bb` actually wants | Notes |
+| --- | --- | --- |
+| `bb pr view 713` | `bb pr get 713` (or `bb pr get WS/REPO 713`) | No `view` subcommand. Read metadata with `get`. |
+| `bb pr checks 713` | `bb pipeline list WS/REPO --limit 5` | Pipelines are queried separately. |
+| `bb pr edit 713 --body …` | `bb raw PUT /repositories/WS/REPO/pullrequests/713 --data '{"description":"…"}'` | No dedicated `edit`; use `raw`. |
+| `bb pr comment 713 -b …` | `bb raw POST /repositories/WS/REPO/pullrequests/713/comments --data '{"content":{"raw":"…"}}'` | Comments go through `raw`. |
+| `bb pr close 713` | `bb raw POST /repositories/WS/REPO/pullrequests/713/decline` | Decline, not close. |
+
+**Slug inference:** when you run `bb` from inside a clone whose `origin` is on `bitbucket.org`, you can omit `WS/REPO` and `bb` will infer it from `git remote get-url origin`. So `bb pr get 713` works inside the repo. Explicit `WS/REPO` always wins. If you're not in a Bitbucket clone, pass it.
+
 ## Quick reference — task → command
 
-Look here first. If your task is in this table, run the command shown and skip the rest of the doc. Replace `WS/REPO` with the workspace/repo slug (e.g. `myws/myrepo`) and `ID` with the PR id.
+Look here first. If your task is in this table, run the command shown and skip the rest of the doc. Replace `WS/REPO` with the workspace/repo slug (e.g. `myws/myrepo`) and `ID` with the PR id. Inside a Bitbucket clone, `WS/REPO` may be omitted from any `bb` command — it's inferred from `origin`.
 
 | Task | Command |
 | --- | --- |
@@ -140,14 +154,16 @@ bb repo get WORKSPACE/REPO
 
 ### Pull requests
 
+`WORKSPACE/REPO` may be omitted from any `bb pr` command when run inside a Bitbucket clone (inferred from `git remote get-url origin`).
+
 ```sh
-bb pr list WORKSPACE/REPO [--state OPEN|MERGED|DECLINED|SUPERSEDED] [--limit N]
-bb pr get WORKSPACE/REPO PR_ID
-bb pr diff WORKSPACE/REPO PR_ID                                    # raw diff text
-bb pr comments WORKSPACE/REPO PR_ID [--limit N]                    # read-only; post via `bb raw`
-bb pr create WORKSPACE/REPO --source BR --dest BR --title T [--body B] [--close-source]
-bb pr approve WORKSPACE/REPO PR_ID
-bb pr merge WORKSPACE/REPO PR_ID [--strategy merge_commit|squash|fast_forward]
+bb pr list [WORKSPACE/REPO] [--state OPEN|MERGED|DECLINED|SUPERSEDED] [--limit N]
+bb pr get [WORKSPACE/REPO] PR_ID
+bb pr diff [WORKSPACE/REPO] PR_ID                                  # raw diff text
+bb pr comments [WORKSPACE/REPO] PR_ID [--limit N]                  # read-only; post via `bb raw`
+bb pr create [WORKSPACE/REPO] --source BR --dest BR --title T [--body B] [--close-source]
+bb pr approve [WORKSPACE/REPO] PR_ID
+bb pr merge [WORKSPACE/REPO] PR_ID [--strategy merge_commit|squash|fast_forward]
 ```
 
 Only `create`, `approve`, and `merge` are wrapped as PR mutations. **Posting comments, declining, updating title/description, and unapproving go through `bb raw`** — see the quick reference table above for one-liners.
@@ -155,16 +171,16 @@ Only `create`, `approve`, and `merge` are wrapped as PR mutations. **Posting com
 ### Branches and commits
 
 ```sh
-bb branch list WORKSPACE/REPO [--limit N]
-bb commit get WORKSPACE/REPO SHA
+bb branch list [WORKSPACE/REPO] [--limit N]
+bb commit get [WORKSPACE/REPO] SHA
 ```
 
 ### Pipelines
 
 ```sh
-bb pipeline list WORKSPACE/REPO [--limit N]
-bb pipeline get WORKSPACE/REPO UUID                                # UUID may include braces
-bb pipeline logs WORKSPACE/REPO UUID STEP_UUID                     # raw log text
+bb pipeline list [WORKSPACE/REPO] [--limit N]
+bb pipeline get [WORKSPACE/REPO] UUID                              # UUID may include braces
+bb pipeline logs [WORKSPACE/REPO] UUID STEP_UUID                   # raw log text
 ```
 
 ## Common recipes

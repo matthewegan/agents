@@ -7,6 +7,8 @@ hatch for any endpoint we don't wrap, and auto-pagination by default.
 from __future__ import annotations
 
 import json as _json
+import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Optional
@@ -51,13 +53,99 @@ def _client() -> Client:
     return Client(load_config())
 
 
-def _parse_repo(slug: str) -> tuple[str, str]:
+_BITBUCKET_REMOTE_RE = re.compile(
+    r"bitbucket\.org[:/]([^/\s]+)/([^/\s]+?)(?:\.git)?/?$"
+)
+
+
+def _infer_slug_from_cwd() -> str:
+    """Read `git remote get-url origin` and parse out WORKSPACE/REPO.
+
+    Used as a fallback when a slug positional is omitted. Raises
+    ValidationError with actionable text when the cwd isn't a Bitbucket
+    Cloud git repo.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "remote", "get-url", "origin"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except FileNotFoundError:
+        raise ValidationError(
+            "no WS/REPO supplied and git is not installed; pass WS/REPO explicitly"
+        )
+    except subprocess.CalledProcessError:
+        raise ValidationError(
+            "no WS/REPO supplied and current directory has no git remote 'origin'; "
+            "pass WS/REPO explicitly"
+        )
+    url = result.stdout.strip()
+    m = _BITBUCKET_REMOTE_RE.search(url)
+    if not m:
+        raise ValidationError(
+            f"current repo's origin is not a Bitbucket Cloud remote ({url!r}); "
+            "pass WS/REPO explicitly"
+        )
+    return f"{m.group(1)}/{m.group(2)}"
+
+
+def _parse_repo(slug: Optional[str]) -> tuple[str, str]:
+    if slug is None or slug == ".":
+        slug = _infer_slug_from_cwd()
     if "/" not in slug:
         raise ValidationError(f"expected WORKSPACE/REPO, got: {slug!r}")
     ws, repo = slug.split("/", 1)
     if not ws or not repo:
         raise ValidationError(f"expected WORKSPACE/REPO, got: {slug!r}")
     return ws, repo
+
+
+def _resolve_pr(arg1: str, arg2: Optional[int]) -> tuple[str, str, int]:
+    """Resolve `[WS/REPO] PR_ID` positionals.
+
+    - `bb pr <cmd> ws/repo 42` → ws, repo, 42
+    - `bb pr <cmd> 42` (from inside a Bitbucket repo) → infer ws/repo, 42
+    """
+    if "/" in arg1:
+        if arg2 is None:
+            raise ValidationError(
+                "missing PR_ID. Usage: bb pr <cmd> [WS/REPO] PR_ID"
+            )
+        ws, repo = _parse_repo(arg1)
+        return ws, repo, arg2
+    if not arg1.isdigit():
+        raise ValidationError(
+            f"expected WS/REPO or PR_ID, got: {arg1!r}. "
+            "Usage: bb pr <cmd> [WS/REPO] PR_ID"
+        )
+    if arg2 is not None:
+        raise ValidationError(
+            f"got two args but first ({arg1!r}) is not WS/REPO. "
+            "Usage: bb pr <cmd> WS/REPO PR_ID"
+        )
+    ws, repo = _parse_repo(None)
+    return ws, repo, int(arg1)
+
+
+def _resolve_slug_extra(arg1: str, arg2: Optional[str]) -> tuple[str, str, str]:
+    """Resolve `[WS/REPO] EXTRA` for non-PR commands (commit SHA, pipeline UUID).
+
+    Distinguishes by checking whether arg1 contains `/`. Use only for
+    commands whose extra argument cannot itself contain a `/`.
+    """
+    if "/" in arg1:
+        if arg2 is None:
+            raise ValidationError("missing positional argument")
+        ws, repo = _parse_repo(arg1)
+        return ws, repo, arg2
+    if arg2 is not None:
+        raise ValidationError(
+            f"got two args but first ({arg1!r}) is not WS/REPO"
+        )
+    ws, repo = _parse_repo(None)
+    return ws, repo, arg1
 
 
 def _parse_query(items: list[str]) -> Optional[dict]:
@@ -186,7 +274,11 @@ def repo_list(
 
 
 @repo_app.command("get")
-def repo_get(slug: str = typer.Argument(..., help="WORKSPACE/REPO")) -> None:
+def repo_get(
+    slug: Optional[str] = typer.Argument(
+        None, help="WORKSPACE/REPO (omit to infer from cwd's git remote)"
+    ),
+) -> None:
     ws, repo = _parse_repo(slug)
     with _client() as c:
         emit_json(c.get_json(f"/repositories/{ws}/{repo}"))
@@ -196,7 +288,9 @@ def repo_get(slug: str = typer.Argument(..., help="WORKSPACE/REPO")) -> None:
 
 @pr_app.command("list")
 def pr_list(
-    slug: str = typer.Argument(..., help="WORKSPACE/REPO"),
+    slug: Optional[str] = typer.Argument(
+        None, help="WORKSPACE/REPO (omit to infer from cwd)"
+    ),
     state: Optional[str] = typer.Option(
         None, "--state", help="OPEN/MERGED/DECLINED/SUPERSEDED"
     ),
@@ -217,21 +311,21 @@ def pr_list(
 
 @pr_app.command("get")
 def pr_get(
-    slug: str = typer.Argument(...),
-    pr_id: int = typer.Argument(...),
+    arg1: str = typer.Argument(..., metavar="[WS/REPO]"),
+    arg2: Optional[int] = typer.Argument(None, metavar="PR_ID"),
 ) -> None:
-    ws, repo = _parse_repo(slug)
+    ws, repo, pr_id = _resolve_pr(arg1, arg2)
     with _client() as c:
         emit_json(c.get_json(f"/repositories/{ws}/{repo}/pullrequests/{pr_id}"))
 
 
 @pr_app.command("diff")
 def pr_diff(
-    slug: str = typer.Argument(...),
-    pr_id: int = typer.Argument(...),
+    arg1: str = typer.Argument(..., metavar="[WS/REPO]"),
+    arg2: Optional[int] = typer.Argument(None, metavar="PR_ID"),
 ) -> None:
     """Print the raw unified diff of a PR."""
-    ws, repo = _parse_repo(slug)
+    ws, repo, pr_id = _resolve_pr(arg1, arg2)
     with _client() as c:
         resp = c.request(
             "GET",
@@ -243,11 +337,11 @@ def pr_diff(
 
 @pr_app.command("comments")
 def pr_comments(
-    slug: str = typer.Argument(...),
-    pr_id: int = typer.Argument(...),
+    arg1: str = typer.Argument(..., metavar="[WS/REPO]"),
+    arg2: Optional[int] = typer.Argument(None, metavar="PR_ID"),
     limit: Optional[int] = typer.Option(None, "--limit"),
 ) -> None:
-    ws, repo = _parse_repo(slug)
+    ws, repo, pr_id = _resolve_pr(arg1, arg2)
     with _client() as c:
         items = list(
             c.paginate(
@@ -260,7 +354,9 @@ def pr_comments(
 
 @pr_app.command("create")
 def pr_create(
-    slug: str = typer.Argument(...),
+    slug: Optional[str] = typer.Argument(
+        None, help="WORKSPACE/REPO (omit to infer from cwd)"
+    ),
     source: str = typer.Option(..., "--source", help="Source branch name"),
     dest: str = typer.Option(..., "--dest", help="Destination branch name"),
     title: str = typer.Option(..., "--title"),
@@ -287,10 +383,10 @@ def pr_create(
 
 @pr_app.command("approve")
 def pr_approve(
-    slug: str = typer.Argument(...),
-    pr_id: int = typer.Argument(...),
+    arg1: str = typer.Argument(..., metavar="[WS/REPO]"),
+    arg2: Optional[int] = typer.Argument(None, metavar="PR_ID"),
 ) -> None:
-    ws, repo = _parse_repo(slug)
+    ws, repo, pr_id = _resolve_pr(arg1, arg2)
     with _client() as c:
         resp = c.request(
             "POST", f"/repositories/{ws}/{repo}/pullrequests/{pr_id}/approve"
@@ -300,15 +396,15 @@ def pr_approve(
 
 @pr_app.command("merge")
 def pr_merge(
-    slug: str = typer.Argument(...),
-    pr_id: int = typer.Argument(...),
+    arg1: str = typer.Argument(..., metavar="[WS/REPO]"),
+    arg2: Optional[int] = typer.Argument(None, metavar="PR_ID"),
     strategy: str = typer.Option(
         "merge_commit",
         "--strategy",
         help="merge_commit/squash/fast_forward",
     ),
 ) -> None:
-    ws, repo = _parse_repo(slug)
+    ws, repo, pr_id = _resolve_pr(arg1, arg2)
     with _client() as c:
         resp = c.request(
             "POST",
@@ -322,7 +418,9 @@ def pr_merge(
 
 @branch_app.command("list")
 def branch_list(
-    slug: str = typer.Argument(...),
+    slug: Optional[str] = typer.Argument(
+        None, help="WORKSPACE/REPO (omit to infer from cwd)"
+    ),
     limit: Optional[int] = typer.Option(None, "--limit"),
 ) -> None:
     ws, repo = _parse_repo(slug)
@@ -337,10 +435,10 @@ def branch_list(
 
 @commit_app.command("get")
 def commit_get(
-    slug: str = typer.Argument(...),
-    sha: str = typer.Argument(...),
+    arg1: str = typer.Argument(..., metavar="[WS/REPO]"),
+    arg2: Optional[str] = typer.Argument(None, metavar="SHA"),
 ) -> None:
-    ws, repo = _parse_repo(slug)
+    ws, repo, sha = _resolve_slug_extra(arg1, arg2)
     with _client() as c:
         emit_json(c.get_json(f"/repositories/{ws}/{repo}/commit/{sha}"))
 
@@ -349,7 +447,9 @@ def commit_get(
 
 @pipeline_app.command("list")
 def pipeline_list(
-    slug: str = typer.Argument(...),
+    slug: Optional[str] = typer.Argument(
+        None, help="WORKSPACE/REPO (omit to infer from cwd)"
+    ),
     limit: Optional[int] = typer.Option(None, "--limit"),
 ) -> None:
     ws, repo = _parse_repo(slug)
@@ -362,22 +462,42 @@ def pipeline_list(
 
 @pipeline_app.command("get")
 def pipeline_get(
-    slug: str = typer.Argument(...),
-    uuid: str = typer.Argument(..., help="Pipeline UUID (include braces if present)"),
+    arg1: str = typer.Argument(..., metavar="[WS/REPO]"),
+    arg2: Optional[str] = typer.Argument(
+        None, metavar="UUID", help="Pipeline UUID (include braces if present)"
+    ),
 ) -> None:
-    ws, repo = _parse_repo(slug)
+    ws, repo, uuid = _resolve_slug_extra(arg1, arg2)
     with _client() as c:
         emit_json(c.get_json(f"/repositories/{ws}/{repo}/pipelines/{uuid}"))
 
 
 @pipeline_app.command("logs")
 def pipeline_logs(
-    slug: str = typer.Argument(...),
-    uuid: str = typer.Argument(...),
-    step_uuid: str = typer.Argument(...),
+    arg1: str = typer.Argument(..., metavar="[WS/REPO]"),
+    arg2: str = typer.Argument(..., metavar="UUID_OR_STEP"),
+    arg3: Optional[str] = typer.Argument(None, metavar="STEP_UUID"),
 ) -> None:
-    """Print raw log text for a pipeline step."""
-    ws, repo = _parse_repo(slug)
+    """Print raw log text for a pipeline step.
+
+    Accepts either:
+        bb pipeline logs WS/REPO PIPELINE_UUID STEP_UUID
+        bb pipeline logs PIPELINE_UUID STEP_UUID   (cwd inference)
+    """
+    if "/" in arg1:
+        if arg3 is None:
+            raise ValidationError(
+                "missing STEP_UUID. Usage: bb pipeline logs [WS/REPO] PIPELINE_UUID STEP_UUID"
+            )
+        ws, repo = _parse_repo(arg1)
+        uuid, step_uuid = arg2, arg3
+    else:
+        if arg3 is not None:
+            raise ValidationError(
+                f"got three args but first ({arg1!r}) is not WS/REPO"
+            )
+        ws, repo = _parse_repo(None)
+        uuid, step_uuid = arg1, arg2
     with _client() as c:
         resp = c.request(
             "GET",
